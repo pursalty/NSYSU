@@ -1,13 +1,10 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-int main()
-{
+int main() {
     long long a, b;
-
-    cin >> a >> b;
-    long long result = abs(a - b);
-    cout << result << endl;
-
+    while (cin >> a >> b) {
+        cout << abs(a - b) << "\n";
+    }
     return 0;
 }
