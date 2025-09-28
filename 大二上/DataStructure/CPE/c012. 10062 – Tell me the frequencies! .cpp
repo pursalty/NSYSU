@@ -3,6 +3,7 @@ using namespace std;
 
 int main(){
     string str;
+    bool chk = false;
     while(getline(cin, str)){
         map<int, int> result;
         for(int i = 0; i < str.size(); i ++){
@@ -14,10 +15,11 @@ int main(){
             if(a.second != b.second)return a.second < b.second;
             return a.first > b.first;
         });
+        if(chk) cout << endl;
         for(int j = 0; j < final.size(); j ++){
             cout << final[j].first << " " << final[j].second << endl;
+            chk = true;
         }
-        cout << endl;
     }
     return 0;
 }
