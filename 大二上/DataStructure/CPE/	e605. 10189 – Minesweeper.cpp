@@ -15,7 +15,7 @@ int main(){
 
         int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
         int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
-
+        if(cnt != 1) cout << endl;
         cout << "Field #" << cnt << ":" << endl;
         for(int i = 0; i < a; i ++){
             for(int j = 0; j < b; j ++){
