@@ -1,0 +1,25 @@
+Please choose the action you want to do:
+1.Generate the test files and check the sort
+2. Do the large test data
+
+1
+
+Generation Complete!
+
+Please choose the action you want to do:
+1.Generate the test files and check the sort
+2. Do the large test data
+
+2
+
+執行中
+資料量  Insertion Sort  Merge Sort      Quick Sort      C qsort()       C++ sort()
+100     0.000000        0.000097        0.000000        0.000000        0.000000
+500     0.000000        0.000000        0.000000        0.000100        0.000000
+1000    0.000251        0.000203        0.000152        0.000200        0.000102
+5000    0.008307        0.001179        0.000501        0.000544        0.000602
+10000   0.032992        0.002393        0.001083        0.001250        0.001175
+50000   0.814934        0.012270        0.005765        0.007392        0.006874
+100000  3.270314        0.025300        0.011821        0.015693        0.015143
+500000  85.454108       0.145287        0.071016        0.093007        0.090544
+註:時間單位為秒，TLE 表示時間大於5分鐘。
