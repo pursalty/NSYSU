@@ -2,86 +2,101 @@
 #include <string>
 #include <fstream>
 #include <vector>
-
+#include <set>
 using namespace std;
 
-// 建議將 solve 改為從 cin 讀取，以配合自動評分腳本
-void solve(string outFileName)
-{
+//DSU
+struct DSU {
+    vector<int> parent;
+    DSU(int n) {
+        parent.resize(n + 1);
+        for (int i = 1; i <= n; i++) parent[i] = i;
+    }
+    int find(int x) {
+        if (parent[x] == x) return x;
+        return parent[x] = find(parent[x]);
+    }
+    void unite(int x, int y) {
+        int rootX = find(x), rootY = find(y);
+        if (rootX != rootY) parent[rootX] = rootY;
+    }
+};
+
+void solve(string outFileName) {
     int n, k;
-    if (!(cin >> n >> k))
-        return; // 從標準輸入讀取 n 和 k [cite: 9-11]
+    if (!(cin >> n >> k)) return; 
 
+    //grid
     vector<vector<int>> grid(n, vector<int>(n, 0));
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            grid[i][j] = (n - i - 1) * n + j + 1; // 由下而上、由左而右編號 [cite: 10]
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            grid[i][j] = (n - i - 1) * n + j + 1;
         }
     }
 
-    // --- Phase 1: Initialization (DSU) ---
-    vector<int> parent(n * n + 1);
-    for (int i = 1; i <= n * n; i++)
-        parent[i] = i;
-
-    auto find = [&](auto self, int x) -> int
-    {
-        return parent[x] == x ? x : (parent[x] = self(self, parent[x]));
-    };
-
-    for (int i = 0; i < k; i++)
-    {
+    DSU dsu(n * n);
+    for (int i = 0; i < k; i++) {
         int u, v;
-        cin >> u >> v; // 讀取合併操作 [cite: 12]
-        int rootU = find(find, u);
-        int rootV = find(find, v);
-        if (rootU != rootV)
-            parent[rootU] = rootV;
+        cin >> u >> v; 
+        dsu.unite(u, v);
     }
 
-    // --- Phase 2: Conquest ---
-    int ID, p;
-    cin >> ID >> p; // 讀取起始點與移動步數 [cite: 14-15]
+    //conquest
+    int startID, p;
+    cin >> startID >> p; 
+    
+    vector<char> moves;
+    for (int i = 0; i < p; i++) {
+        char moveChar;
+        cin >> moveChar;
+        moves.push_back(moveChar);
+    }
 
-    vector<bool> isConquested(n * n + 1, false);
-    isConquested[ID] = true;
+    set<int> ownedRoots;
+    set<int> activeRoots;
 
-    int currID = ID;
-    string move;
-    cin >> move; // 讀取方向 [cite: 16]
+    int startRoot = dsu.find(startID);
+    ownedRoots.insert(startRoot);
+    activeRoots.insert(startRoot);
 
-    for (int i = 0; i < p; i++)
-    {
-        char dir = move[i];
-        int r = (currID - 1) / n;
-        int c = (currID - 1) % n;
+    for (char dir : moves) {
+        set<int> nextActiveRoots; 
+        set<int> newlyOwnedRoots; 
 
-        int nr = r, nc = c;
-        if (dir == 'U')
-            nr++;
-        else if (dir == 'D')
-            nr--;
-        else if (dir == 'L')
-            nc--;
-        else if (dir == 'R')
-            nc++;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                int currID = grid[i][j];
+                int currRoot = dsu.find(currID);
 
-        if (nr >= 0 && nr < n && nc >= 0 && nc < n) // 邊界檢查 [cite: 46]
-        {
-            int nextID = nr * n + nc + 1;
-            if (isConquested[nextID])
-            { // 退休機制 [cite: 48]
-                currID = nextID;
-                break;
+                if (activeRoots.count(currRoot)) {
+                    int nr = i, nc = j;
+                    if (dir == 'U') nr--;
+                    else if (dir == 'D') nr++;
+                    else if (dir == 'L') nc--;
+                    else if (dir == 'R') nc++;
+
+                    if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
+                        nextActiveRoots.insert(currRoot);
+                    } else {
+                        int nextID = grid[nr][nc];
+                        int nextRoot = dsu.find(nextID);
+
+                        if (!ownedRoots.count(nextRoot)) {
+                            newlyOwnedRoots.insert(nextRoot);
+                            nextActiveRoots.insert(nextRoot);
+                        }
+                    }
+                }
             }
-            isConquested[nextID] = true;
-            currID = nextID;
         }
+
+        for (int root : newlyOwnedRoots) {
+            ownedRoots.insert(root);
+        }
+        activeRoots = nextActiveRoots;
     }
 
-    // --- Phase 3: SVG 輸出 (嚴格遵循 5 步流程) [cite: 178-183] ---
+    //SVG
     const int cellSize = 80;
     const int offset = 30;
     ofstream svg(outFileName);
@@ -90,61 +105,45 @@ void solve(string outFileName)
         << n * cellSize + offset * 2 << "\" height=\""
         << n * cellSize + offset * 2 << "\">" << endl;
 
-    // 1. Draw the white background
     svg << "<rect width=\"100%\" height=\"100%\" fill=\"white\" />" << endl;
 
-    // 2. Fill each cell with a color [cite: 181]
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            int id = grid[i][j];
-            int x = offset + j * cellSize;
-            int y = offset + i * cellSize;
-            string fillColor = isConquested[id] ? "#FFD700" : "white";
-            svg << "<rect x=\"" << x << "\" y=\"" << y << "\" width=\"" << cellSize
-                << "\" height=\"" << cellSize << "\" fill=\"" << fillColor << "\" />" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            int currentID = grid[i][j]; 
+            string color = ownedRoots.count(dsu.find(currentID)) ? "#FFD700" : "white";
+            svg << "<rect x=\"" << offset + j * cellSize << "\" y=\"" << offset + i * cellSize 
+                << "\" width=\"" << cellSize << "\" height=\"" << cellSize << "\" fill=\"" << color << "\" />" << endl;
         }
     }
 
-    // 3. Draw the outer border of the board [cite: 182]
-    svg << "<rect x=\"" << offset << "\" y=\"" << offset << "\" width=\"" << n * cellSize
+    svg << "<rect x=\"" << offset << "\" y=\"" << offset << "\" width=\"" << n * cellSize 
         << "\" height=\"" << n * cellSize << "\" fill=\"none\" stroke=\"black\" stroke-width=\"3\" />" << endl;
 
-    // 4. Draw only the boundaries between different regions [cite: 183]
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            int id = grid[i][j];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             int x = offset + j * cellSize;
             int y = offset + i * cellSize;
+            int rootSelf = dsu.find(grid[i][j]);
 
-            if (j + 1 < n && find(find, id) != find(find, grid[i][j + 1]))
-            {
-                svg << "<line x1=\"" << x + cellSize << "\" y1=\"" << y
-                    << "\" x2=\"" << x + cellSize << "\" y2=\"" << y + cellSize
+            if (j + 1 < n && rootSelf != dsu.find(grid[i][j + 1])) {
+                svg << "<line x1=\"" << x + cellSize << "\" y1=\"" << y 
+                    << "\" x2=\"" << x + cellSize << "\" y2=\"" << y + cellSize 
                     << "\" stroke=\"black\" stroke-width=\"2\" />" << endl;
             }
-            if (i + 1 < n && find(find, id) != find(find, grid[i + 1][j]))
-            {
-                svg << "<line x1=\"" << x << "\" y1=\"" << y + cellSize
-                    << "\" x2=\"" << x + cellSize << "\" y2=\"" << y + cellSize
+            if (i + 1 < n && rootSelf != dsu.find(grid[i + 1][j])) {
+                svg << "<line x1=\"" << x << "\" y1=\"" << y + cellSize 
+                    << "\" x2=\"" << x + cellSize << "\" y2=\"" << y + cellSize 
                     << "\" stroke=\"black\" stroke-width=\"2\" />" << endl;
             }
         }
     }
 
-    // 5. Draw the cell labels [cite: 183]
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            int x = offset + j * cellSize + cellSize / 2;
-            int y = offset + i * cellSize + cellSize / 2;
-            svg << "<text x=\"" << x << "\" y=\"" << y << "\" font-family=\"Arial\" font-size=\"20\" "
-                << "text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"gray\">"
-                << grid[i][j] << "</text>" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            svg << "<text x=\"" << offset + j * cellSize + cellSize / 2 
+                << "\" y=\"" << offset + i * cellSize + cellSize / 2 
+                << "\" font-family=\"Arial\" font-size=\"24\" text-anchor=\"middle\" "
+                << "dominant-baseline=\"middle\" fill=\"gray\">" << grid[i][j] << "</text>" << endl;
         }
     }
 
@@ -152,14 +151,9 @@ void solve(string outFileName)
     svg.close();
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char* argv[]) {
     string outFile = "result.svg";
-    if (argc >= 2)
-        outFile = argv[1]; // 接受指令列參數指定輸出檔名 [cite: 241-243]
-
-    // 執行一次 solve，從 cin 讀取
+    if (argc >= 2) outFile = argv[1]; 
     solve(outFile);
-
     return 0;
 }
